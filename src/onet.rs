@@ -1,9 +1,8 @@
 use std::fmt::{Debug, Formatter, Result as FResult};
 use std::net::SocketAddr;
-use std::sync::Arc;
 
 use hashgraph::{Key as HgKey, Node as HgNode, NodeConfig, Peer};
-use rust_dht::{Dht, DhtConfig, Mutexed, Node as DhtNode, Packet, Plugins, Rpc, Wrapper};
+use rust_dht::{Dht, DhtConfig, Packet, Rpc, Wrapper};
 
 #[derive(Clone, Debug)]
 pub struct OnetConfig {
@@ -14,6 +13,7 @@ pub struct OnetConfig {
 
 pub struct Onet {
     // key: Key,
+    #[allow(dead_code)]
     config: OnetConfig,
     dht: Dht,
     hg: HgNode,
@@ -66,12 +66,12 @@ impl Onet {
 
         let (tx_in, tx_out) = self.hg.run();
 
-        // tx_in.send("KIK".to_string().into_bytes()).unwrap();
+        tx_in.send("KIK".to_string().into_bytes()).unwrap();
 
         loop {
             let res = tx_out.recv();
 
-            println!("RESULT {:?}", res);
+            println!("RESULT {:?}", String::from_utf8(res.unwrap()).unwrap());
         }
     }
 }
@@ -85,15 +85,13 @@ struct ConnectWrapper {
 
 impl Wrapper for ConnectWrapper {
     fn on_recv(&self, pack: &Packet) -> Packet {
-        let mut mut_pack = pack.clone();
-
         let mut d = pack.data.clone();
 
         // extract the hash
         let mut pub_key = d.split_off(self.hash.len());
 
         // extract the pubKey
-        let data = pub_key.split_off(self.pub_key.len());
+        pub_key.split_off(self.pub_key.len());
 
         let mut sender = pack.header.sender.clone();
 

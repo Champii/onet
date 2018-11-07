@@ -1,7 +1,6 @@
-#[macro_use]
-extern crate log;
 extern crate clap;
 extern crate hashgraph;
+extern crate log;
 extern crate rust_dht;
 
 mod args;
