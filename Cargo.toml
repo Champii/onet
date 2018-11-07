@@ -1,0 +1,15 @@
+[package]
+name = "onet"
+version = "0.1.0"
+authors = ["champii <contact@champii>"]
+edition = "2018"
+
+[dependencies]
+log = "0.4"
+env_logger = "0.5.12"
+clap="2.32.0"
+
+
+rsrpc = { path = "../rsrpc/" }
+rust_dht = { path = "../rust-dht/" }
+hashgraph = { path = "../hashgraph/" }
