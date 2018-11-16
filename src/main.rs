@@ -1,10 +1,10 @@
 extern crate clap;
 extern crate hashgraph;
-extern crate log;
-extern crate rust_dht;
+extern crate logger;
+// extern crate log;
+// extern crate rust_dht;
 
 mod args;
-mod logger;
 mod onet;
 
 use self::onet::Onet;
