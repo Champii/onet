@@ -12,6 +12,17 @@ service! {
         let hg: Option<Arc<std::sync::RwLock<crate::section::HgNode>>> = None;
         // let routing
 
+        // gotten from either ClientManager or another DataManager
+        fn store(&mut self, data: Vec<u8>) -> bool {
+            // check if self is valid recipient (nearest of data)
+            // check creator (clientmanager or datamanager) and initiator (client identity)
+            // announce on hashgraph the store event with expected storage vault ids
+            // collect accept(store) from Vaults
+            // Take mesures for non-responsive/deny-answering/bad-behaving nodes
+            // send all accepting nodes the store call with actual data
+            true
+        }
+
         fn askjoin(&mut self, pubkey: Vec<u8>) -> bool {
             // check if valid postulant
             // send event to hashgraph
@@ -23,7 +34,8 @@ service! {
             true
         }
     }
-
+}
+service! {
     ClientManagerRpc {
         let hg: Option<Arc<std::sync::RwLock<crate::section::HgNode>>> = None;
 
@@ -36,6 +48,8 @@ service! {
             Ok(vec![42])
         }
     }
+}
+service! {
 
     VaultRpc {
         // let accepted_data
@@ -50,10 +64,11 @@ service! {
         }
     }
 
+}
+service! {
     RoutingRpc {
         // let routing
 
-        // gotten by incoming new vault with age 0
         fn bootstrap_vault(&mut self,) -> bool {
             // generate new RuntimeIdentity : hash(ownID + pub_key)
             // find nearest datamanager in routing

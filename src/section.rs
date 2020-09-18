@@ -3,8 +3,6 @@ pub use hashgraph::{Key, Node as HgNode, NodeConfig};
 use hex::encode;
 use rsrpc::Network;
 use rsrpc::TcpTransport;
-use rsrpc::Transport;
-use rsrpc::UdpTransport;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::io::{self, BufRead};
@@ -13,7 +11,7 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, RwLock};
 use std::thread;
 
-use super::rpc::{ClientManagerRpc, DataManagerRpc, RoutingRpc};
+use super::rpc::{ClientManagerRpc, DataManagerRpc, RoutingRpc, VaultRpc};
 use crate::onet::OnetConfig;
 // use rust_dht::routing::Routing;
 
@@ -113,9 +111,9 @@ impl Section {
         let mut clientmanager_server = ClientManagerRpc::listen_with_network(net.clone());
         clientmanager_server.context.lock().unwrap().hg = Some(Arc::clone(&self.hg));
 
-        let mut section_server = DataManagerRpc::listen_with_network(net);
-        let mut routing_server = RoutingRpc::listen_with_network(net);
-        let mut vault_server = VaultRpc::listen_with_network(net);
+        let mut section_server = DataManagerRpc::listen_with_network(net.clone());
+        let mut routing_server = RoutingRpc::listen_with_network(net.clone());
+        let mut vault_server = VaultRpc::listen_with_network(net.clone());
 
         // // self.hg.add_tx("KIK".to_string().into_bytes());
 
@@ -186,14 +184,32 @@ impl Vault {
         }
     }
 
+    pub fn bootstrap(&mut self) {
+        let mut section = Section::new(self.config.clone());
+
+        section.run();
+
+        self.section = Some(section);
+    }
+
     pub fn connect_bootstrap(&mut self) {
-        let routing_client = RoutingRpc::connect_with_network(self.socket.clone());
+        let mut routing_client =
+            RoutingRpc::connect_tcp(&self.config.connect_addr.clone().unwrap().to_string())
+                .unwrap();
 
         let response = routing_client.bootstrap_vault();
 
-        println!("CONNECT BOOTSTRAP RES {:#?}", response);
-        // If response OK
-        // create section and connect to hg with section routing
+        if response.unwrap().unwrap() {
+            // If response OK
+            // create section and connect to hg with section routing
+            let mut section = Section::new(self.config.clone());
+
+            section.run();
+
+            self.section = Some(section);
+        } else {
+            error!("Bootstrap node and/or section refused this vault to join");
+        }
     }
 }
 
@@ -212,14 +228,19 @@ pub struct Identity {
 
 impl Identity {
     pub fn load(config: &OnetConfig) -> Self {
-        // TODO: put that in config
-        let path = PathBuf::from("~/.onet/identity");
+        // // TODO: put that in config
+        // let path = PathBuf::from("~/.onet/identity");
 
-        let res = std::fs::read(path.clone())
-            .or(Err("Error".to_string()))
-            .unwrap();
+        // let res = std::fs::read(path.clone())
+        //     .or(Err("Error".to_string()))
+        //     .unwrap();
 
-        bincode::deserialize(&res).unwrap()
+        // bincode::deserialize(&res).unwrap()
+        Self {
+            pub_key: vec![],
+            cur_ident: vec![],
+            listening_addr: config.listen_addr.to_string(),
+        }
     }
 }
 

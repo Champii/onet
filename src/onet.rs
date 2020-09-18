@@ -5,7 +5,7 @@ use std::io::{self, BufRead};
 use std::net::SocketAddr;
 use std::thread;
 
-use super::rpc::{ClientManagerRpc, SectionRpc};
+use super::rpc::ClientManagerRpc;
 use super::section::*;
 
 use hashgraph::{Key, Node as HgNode, NodeConfig};
@@ -118,9 +118,13 @@ impl Onet {
         // section.run();
         let identity = Identity::load(&self.config);
         let mut socket = Network::<TcpTransport>::new_default(&self.config.listen_addr);
-        let vault = Vault::new(identity, &self.config, socket);
+        let mut vault = Vault::new(identity, &self.config, socket);
 
-        vault.connect_bootstrap();
+        if self.config.connect_addr.is_none() {
+            vault.bootstrap();
+        } else {
+            vault.connect_bootstrap();
+        }
     }
 }
 
