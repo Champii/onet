@@ -1,11 +1,21 @@
 extern crate clap;
 extern crate hashgraph;
 extern crate logger;
-// extern crate log;
+
+#[macro_use]
+extern crate rsrpc;
+#[macro_use]
+extern crate lazy_static;
+#[macro_use]
+extern crate log;
 // extern crate rust_dht;
+#[macro_use]
+extern crate serde_derive;
 
 mod args;
 mod onet;
+mod rpc;
+mod section;
 
 use self::onet::Onet;
 

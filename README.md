@@ -38,3 +38,23 @@ Connect some other nodes
 # Here we connect to the previously created node
 ./onet -l 127.0.0.1:3002 -c 127.0.0.1:3001
 ```
+
+
+# TODO
+
+- Store section events in datachain
+  - Signature by majority
+- ClientManager RPC
+- Extract Routing from DHT
+- Persona
+  - Verification of persona
+    - client manager
+    - data manager 
+    - vault
+- 
+- Split section
+- Node aging
+- Random join address
+- Multiple identities
+- Configuration file
+

@@ -1,7 +1,7 @@
 use clap::{App, Arg};
 use std::net::SocketAddr;
 
-use super::onet::OnetConfig;
+use super::onet::{OnetConfig, OnetMode};
 
 pub fn to_socket_addr(s: &str) -> SocketAddr {
     match s.parse::<SocketAddr>() {
@@ -41,6 +41,12 @@ pub fn parse_config() -> OnetConfig {
                 .help("Verbose level (between 0-5, default 2)")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("client")
+                .short("C")
+                .help("Run in client mode"),
+        )
+        .arg(Arg::with_name("vault").short("V").help("Run in vault mode"))
         .get_matches();
 
     let connect_addr_str = matches.value_of("connect").unwrap_or("");
@@ -59,9 +65,18 @@ pub fn parse_config() -> OnetConfig {
         .parse::<u8>()
         .unwrap();
 
+    let mode = if matches.is_present("client") {
+        OnetMode::Client
+    } else if matches.is_present("vault") {
+        OnetMode::Vault
+    } else {
+        panic!("Choose --client or --vault");
+    };
+
     OnetConfig {
         listen_addr,
         connect_addr,
         verbose,
+        mode,
     }
 }

@@ -9,6 +9,21 @@ clap="2.32.0"
 
 
 # rust_dht = { path = "../rust-dht/" }
-rsrpc = { git = "https://github.com/Champii/rsrpc" }
-hashgraph = { git = "https://github.com/Champii/onet-hashgraph" }
+# rsrpc = { git = "https://github.com/Champii/rsrpc" }
+rsrpc = { path = "../rsrpc" }
+
+hashgraph = { path = "../hashgraph" }
+# hashgraph = { git = "https://github.com/Champii/onet-hashgraph" }
 logger = { git = "https://github.com/Champii/custom-logger" }
+lazy_static="1.1.0"
+log = "0.4"
+env_logger = "0.5.12"
+
+sha2="0.7.1"
+hex="0.3.2"
+
+serde="1.0"
+serde_derive="1.0"
+serde_bytes="0.10.4"
+bincode="1.0.1"
+byteorder="0.5.3"

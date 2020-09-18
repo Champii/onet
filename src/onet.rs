@@ -2,22 +2,31 @@ use std::io::{self, BufRead};
 use std::net::SocketAddr;
 use std::thread;
 
+use super::rpc::{ClientManagerRpc, SectionRpc};
+use super::section::*;
+
 use hashgraph::{Key, Node as HgNode, NodeConfig};
 // use rust_dht::{Dht, DhtConfig, Packet, Rpc, Wrapper};
+
+#[derive(Clone, Debug)]
+pub enum OnetMode {
+    Client,
+    Vault,
+}
 
 #[derive(Clone, Debug)]
 pub struct OnetConfig {
     pub verbose: u8,
     pub listen_addr: SocketAddr,
     pub connect_addr: Option<SocketAddr>,
+    pub mode: OnetMode,
 }
 
 pub struct Onet {
-    // key: Key,
-    #[allow(dead_code)]
+    key: Key,
     config: OnetConfig,
     // dht: Dht,
-    hg: HgNode,
+    // hg: HgNode,
     // peers: Peers,
     // hg: Arc<Mutex<Hashgraph>>
 }
@@ -41,6 +50,9 @@ impl Onet {
         };
 
         // let dht = Dht::new(dht_config);
+        //
+
+        let key = Key::new_generate().unwrap();
 
         // let hg_key = HgKey {
         //     bytes: dht.key.clone().bytes,
@@ -48,9 +60,10 @@ impl Onet {
         // };
 
         Onet {
+            key: key.clone(),
             config,
             // dht: dht,
-            hg: HgNode::new(Key::new_generate().unwrap(), hg_config),
+            // hg: HgNode::new(key, hg_config),
         }
     }
 
@@ -66,25 +79,40 @@ impl Onet {
 
         // self.dht.bootstrap().unwrap();
 
-        let tx_out = self.hg.run();
+        // JOIN
+        //     connect_to_dht bootstrap node
+        //     generate identity
+        //     get closest node to pubk
+        //     send joinRequest
+        //
 
-        // self.hg.add_tx("KIK".to_string().into_bytes());
-
-        let mut hg = self.hg.clone();
-
-        thread::spawn(move || {
-            let stdin = io::stdin();
-
-            for line in stdin.lock().lines() {
-                hg.add_tx(line.unwrap().into_bytes());
-            }
-        });
-
-        loop {
-            let res = tx_out.recv();
-
-            println!("RESULT {:?}", String::from_utf8(res.unwrap()).unwrap());
+        match self.config.mode {
+            OnetMode::Client => self.run_client(),
+            OnetMode::Vault => self.run_vault(),
         }
+    }
+
+    pub fn run_client(&mut self) {
+        let mut client =
+            ClientManagerRpc::connect_tcp(&self.config.connect_addr.unwrap().to_string()).unwrap();
+
+        let res = client.store_data("TAMERE".as_bytes().to_vec());
+
+        println!("RES {:#?}", res);
+
+        let res = client.get_data(res.unwrap().unwrap().unwrap());
+
+        println!("RES {:#?}", res);
+
+        let mut client2 =
+            SectionRpc::connect_tcp(&self.config.connect_addr.unwrap().to_string()).unwrap();
+
+        let res = client2.store_data("TAMERE2".as_bytes().to_vec());
+    }
+    pub fn run_vault(&mut self) {
+        let mut section = Section::new(self.config.clone());
+
+        section.run();
     }
 }
 
