@@ -8,63 +8,68 @@ use std::{thread, time};
 use super::section::{NetworkEvent, Storage};
 
 service! {
-    SectionRpc {
-        let storage: Arc<std::sync::RwLock<crate::section::Storage>> = Arc::new(std::sync::RwLock::new(crate::section::Storage::load()));
+    DataManagerRpc {
+        let hg: Option<Arc<std::sync::RwLock<crate::section::HgNode>>> = None;
+        // let routing
 
-        fn get_data(&mut self, hash: Vec<u8>) -> Result<Vec<u8>, String> {
-            info!("Section: get_data   {}", hex::encode(hash.clone()));
-
-            self.storage.read().unwrap().get(hash)
+        // gotten from either ClientManager or another DataManager
+        fn store(&mut self, data: Vec<u8>) -> bool {
+            // check if self is valid recipient (nearest of data)
+            // check creator (clientmanager or datamanager) and initiator (client identity)
+            // announce on hashgraph the store event with expected storage vault ids
+            // collect accept(store) from Vaults
+            // Take mesures for non-responsive/deny-answering/bad-behaving nodes
+            // send all accepting nodes the store call with actual data
+            true
         }
 
-        fn store_data(&mut self, data: Vec<u8>) -> Result<Vec<u8>, String> {
-            info!("Section: store_data {}", hex::encode(crate::section::hash(&data)));
+        fn askjoin(&mut self, pubkey: Vec<u8>) -> bool {
+            // check if valid postulant
+            // send event to hashgraph
+            // collect accept/deny
+            // take mesure against bad nodes
+            // uppon acceptance add to routing
+            // send ok + section routing
+            // wait for consensus connection (add to whitelist prior hand)
+            true
+        }
+    }
+    ClientManagerRpc {
+        let hg: Option<Arc<std::sync::RwLock<crate::section::HgNode>>> = None;
 
-            self.storage.write().unwrap().store(data)
+        // gotten from a client
+        fn store(&mut self, data: Vec<u8>) -> Result<Vec<u8>, String> {
+            // check if self is valid clientmanager (nearest of client identity)
+            // fetch nearest datamanager from data
+            // send store event to datamanager
+            // wait for it to respond with success or failure
+            Ok(vec![42])
         }
     }
 
-    ClientManagerRpc {
-        let hg: Option<Arc<std::sync::RwLock<crate::section::HgNode>>> = None;
-        // let pub_key: Vec<u8> = Vec::new();
+    VaultRpc {
+        // let accepted_data
+        // let storage
 
-        fn get_data(&mut self, hash: Vec<u8>) -> Result<Vec<u8>, String> {
-            info!("ClientManager: get_data   {}", hex::encode(hash.clone()));
-
-            let event = crate::section::NetworkEvent {
-                creator: vec![],
-                // creator: self.pub_key.clone(),
-                initiator: vec![],
-                data: crate::section::NetworkEventData::Read(hash),
-            };
-
-            let serie = bincode::serialize(&event).unwrap();
-
-            if let Some(ref mut hg) = self.hg {
-                hg.write().unwrap().add_tx(serie);
-            }
-
-            Ok(vec![])
+        // gotten from datamanager
+        fn store(&mut self, data: Vec<u8>) -> bool {
+            // check if good datamanager (creator)
+            // check if that specific data was accepted by self from consensus
+            // actualy store the data
+            true
         }
+    }
 
-        fn store_data(&mut self, data: Vec<u8>) -> Result<Vec<u8>, String> {
-            let hash = crate::section::hash(&data);
-            info!("ClientManager: store_data {}", hex::encode(hash.clone()));
+    RoutingRpc {
+        // let routing
 
-            let event = crate::section::NetworkEvent {
-                creator: vec![],
-                // creator: self.pub_key.clone(),
-                initiator: vec![],
-                data: crate::section::NetworkEventData::Store(hash.clone()),
-            };
-
-            let serie = bincode::serialize(&event).unwrap();
-
-            if let Some(ref mut hg) = self.hg {
-                hg.write().unwrap().add_tx(serie);
-            }
-
-            Ok(hash)
+        fn bootstrap_vault(&mut self,) -> bool {
+            // generate new RuntimeIdentity : hash(ownID + pub_key)
+            // find nearest datamanager in routing
+            // ask for join
+            // wait for response
+            // send ok + section routing
+            true
         }
     }
 }

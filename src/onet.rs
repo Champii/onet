@@ -1,3 +1,6 @@
+use rsrpc::Network;
+use rsrpc::TcpTransport;
+use rsrpc::Transport;
 use std::io::{self, BufRead};
 use std::net::SocketAddr;
 use std::thread;
@@ -93,26 +96,31 @@ impl Onet {
     }
 
     pub fn run_client(&mut self) {
-        let mut client =
-            ClientManagerRpc::connect_tcp(&self.config.connect_addr.unwrap().to_string()).unwrap();
+        // let mut client =
+        //     ClientManagerRpc::connect_tcp(&self.config.connect_addr.unwrap().to_string()).unwrap();
 
-        let res = client.store_data("TAMERE".as_bytes().to_vec());
+        // let res = client.store_data("TAMERE".as_bytes().to_vec());
 
-        println!("RES {:#?}", res);
+        // println!("RES {:#?}", res);
 
-        let res = client.get_data(res.unwrap().unwrap().unwrap());
+        // let res = client.get_data(res.unwrap().unwrap().unwrap());
 
-        println!("RES {:#?}", res);
+        // println!("RES {:#?}", res);
 
-        let mut client2 =
-            SectionRpc::connect_tcp(&self.config.connect_addr.unwrap().to_string()).unwrap();
+        // let mut client2 =
+        //     SectionRpc::connect_tcp(&self.config.connect_addr.unwrap().to_string()).unwrap();
 
-        let res = client2.store_data("TAMERE2".as_bytes().to_vec());
+        // let res = client2.store_data("TAMERE2".as_bytes().to_vec());
     }
     pub fn run_vault(&mut self) {
-        let mut section = Section::new(self.config.clone());
+        // let mut section = Section::new(self.config.clone());
 
-        section.run();
+        // section.run();
+        let identity = Identity::load(&self.config);
+        let mut socket = Network::<TcpTransport>::new_default(&self.config.listen_addr);
+        let vault = Vault::new(identity, &self.config, socket);
+
+        vault.connect_bootstrap();
     }
 }
 
