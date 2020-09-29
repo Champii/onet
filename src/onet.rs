@@ -1,12 +1,8 @@
+use crate::identity::Identity;
+use crate::vault::Vault;
 use rsrpc::Network;
 use rsrpc::TcpTransport;
-use rsrpc::Transport;
-use std::io::{self, BufRead};
 use std::net::SocketAddr;
-use std::thread;
-
-use super::rpc::ClientManagerRpc;
-use super::section::*;
 
 use hashgraph::{Key, Node as HgNode, NodeConfig};
 // use rust_dht::{Dht, DhtConfig, Packet, Rpc, Wrapper};

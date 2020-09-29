@@ -42,6 +42,7 @@ Connect some other nodes
 
 # TODO
 
+- Hashgraph Acceptlist/Denylist
 - Store section events in datachain
   - Signature by majority
 - ClientManager RPC

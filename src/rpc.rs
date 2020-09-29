@@ -5,11 +5,13 @@ use std::sync::{Arc, Mutex, RwLock};
 use std::time::SystemTime;
 use std::{thread, time};
 
-use super::section::{NetworkEvent, Storage};
+use super::network_event::NetworkEvent;
+use super::storage::Storage;
 
 service! {
     DataManagerRpc {
         let hg: Option<Arc<std::sync::RwLock<crate::section::HgNode>>> = None;
+        // let matching
         // let routing
 
         // gotten from either ClientManager or another DataManager
@@ -23,9 +25,15 @@ service! {
             true
         }
 
-        fn askjoin(&mut self, pubkey: Vec<u8>) -> bool {
+        fn ask_join(&mut self, identity: crate::identity::Identity) -> bool {
             // check if valid postulant
-            // send event to hashgraph
+            let event = crate::network_event::NetworkEvent::ask_join(vec![], vec![], identity);
+
+            if let Some(hg) = &self.hg {
+                let serie = bincode::serialize(&event).unwrap();
+
+                hg.write().unwrap().add_tx(serie);
+            }
             // collect accept/deny
             // take mesure against bad nodes
             // uppon acceptance add to routing
@@ -35,6 +43,7 @@ service! {
         }
     }
 }
+
 service! {
     ClientManagerRpc {
         let hg: Option<Arc<std::sync::RwLock<crate::section::HgNode>>> = None;
@@ -49,8 +58,8 @@ service! {
         }
     }
 }
-service! {
 
+service! {
     VaultRpc {
         // let accepted_data
         // let storage
@@ -63,19 +72,34 @@ service! {
             true
         }
     }
-
 }
+
 service! {
     RoutingRpc {
         // let routing
+        let routing: Arc<std::sync::RwLock<crate::routing::Routing>> = Arc::new(std::sync::RwLock::new(crate::routing::Routing::new(vec![])));
 
-        fn bootstrap_vault(&mut self,) -> bool {
+        fn bootstrap_vault(&mut self, identity: crate::identity::Identity) -> std::collections::HashMap<crate::section::Hash, crate::identity::Identity> {
             // generate new RuntimeIdentity : hash(ownID + pub_key)
-            // find nearest datamanager in routing
-            // ask for join
-            // wait for response
+            let mut routing = self.routing.write().unwrap();
+
+            let datamanager = routing.get_nearest_of(identity.cur_ident.clone()).unwrap();
+
+            if datamanager.cur_ident == routing.own_hash && routing.section_members.len() == 1 {
+                // Direct ask
+                routing.add(identity);
+            } else {
+                let mut dm_client = crate::rpc::DataManagerRpc::connect_tcp(&datamanager.listening_addr).unwrap();
+
+                dm_client.ask_join(identity.clone());
+
+                // wait for response
+
+                routing.add(identity);
+            }
+
             // send ok + section routing
-            true
+            routing.section_members.clone()
         }
     }
 }
