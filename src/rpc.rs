@@ -11,6 +11,8 @@ use super::storage::Storage;
 service! {
     DataManagerRpc {
         let hg: Option<Arc<std::sync::RwLock<crate::section::HgNode>>> = None;
+        let matching: Option<Arc<std::sync::RwLock<crate::async_response_matcher::AsyncResponseMatcher<bool>>>> = None;
+        let routing: Arc<std::sync::RwLock<crate::routing::Routing>> = Arc::new(std::sync::RwLock::new(crate::routing::Routing::new(vec![])));
         // let matching
         // let routing
 
@@ -27,19 +29,29 @@ service! {
 
         fn ask_join(&mut self, identity: crate::identity::Identity) -> bool {
             // check if valid postulant
-            let event = crate::network_event::NetworkEvent::ask_join(vec![], vec![], identity);
+            let own_hash = self.routing.read().unwrap().own_hash.clone();
+            let event = crate::network_event::NetworkEvent::ask_join(own_hash, vec![], identity.clone());
 
             if let Some(hg) = &self.hg {
                 let serie = bincode::serialize(&event).unwrap();
 
                 hg.write().unwrap().add_tx(serie);
             }
+
+            if let Some(matching) = &self.matching {
+                let (sender, recv) = std::sync::mpsc::channel();
+                matching.write().unwrap().add(identity.cur_ident, sender);
+
+                let response = recv.recv();
+
+                return response.unwrap();
+            }
             // collect accept/deny
             // take mesure against bad nodes
             // uppon acceptance add to routing
             // send ok + section routing
             // wait for consensus connection (add to whitelist prior hand)
-            true
+            false
         }
     }
 }
@@ -81,25 +93,39 @@ service! {
 
         fn bootstrap_vault(&mut self, identity: crate::identity::Identity) -> std::collections::HashMap<crate::section::Hash, crate::identity::Identity> {
             // generate new RuntimeIdentity : hash(ownID + pub_key)
-            let mut routing = self.routing.write().unwrap();
+            let (cur_ident, own_hash, addr) = {
+                let mut routing = self.routing.read().unwrap();
 
-            let datamanager = routing.get_nearest_of(identity.cur_ident.clone()).unwrap();
+                let datamanager = routing.get_nearest_of(identity.cur_ident.clone()).unwrap();
 
-            if datamanager.cur_ident == routing.own_hash && routing.section_members.len() == 1 {
+                (datamanager.cur_ident.clone(), routing.own_hash.clone(), datamanager.listening_addr.clone())
+            };
+
+            if cur_ident == own_hash {
                 // Direct ask
+
+                let mut dm_client = crate::rpc::DataManagerRpc::connect_tcp(&addr).unwrap();
+
+                dm_client.ask_join(identity.clone());
+                let mut routing = self.routing.write().unwrap();
+
                 routing.add(identity);
             } else {
-                let mut dm_client = crate::rpc::DataManagerRpc::connect_tcp(&datamanager.listening_addr).unwrap();
+                let mut dm_client = crate::rpc::DataManagerRpc::connect_tcp(&addr).unwrap();
 
                 dm_client.ask_join(identity.clone());
 
-                // wait for response
-
+                let mut routing = self.routing.write().unwrap();
                 routing.add(identity);
+                // wait for response
             }
 
-            // send ok + section routing
-            routing.section_members.clone()
+            {
+                let mut routing = self.routing.write().unwrap();
+
+                // send ok + section routing
+                routing.section_members.clone()
+            }
         }
     }
 }

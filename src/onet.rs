@@ -108,6 +108,7 @@ impl Onet {
 
         // let res = client2.store_data("TAMERE2".as_bytes().to_vec());
     }
+
     pub fn run_vault(&mut self) {
         // let mut section = Section::new(self.config.clone());
 

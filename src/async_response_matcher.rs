@@ -2,24 +2,24 @@ use crate::section::Hash;
 use std::collections::HashMap;
 use std::sync::mpsc::Sender;
 
-pub struct AsyncResponseMatcher {
-    waiting: HashMap<Hash, Sender<Vec<u8>>>,
+pub struct AsyncResponseMatcher<T> {
+    waiting: HashMap<Hash, Sender<T>>,
 }
 
-impl AsyncResponseMatcher {
+impl<T> AsyncResponseMatcher<T> {
     pub fn new() -> Self {
         Self {
             waiting: HashMap::new(),
         }
     }
 
-    pub fn add(&mut self, hash: Hash, tx: Sender<Vec<u8>>) {
+    pub fn add(&mut self, hash: Hash, tx: Sender<T>) {
         trace!("Add waiting {:?}", hash);
 
         self.waiting.insert(hash, tx);
     }
 
-    pub fn resolve(matcher: &mut AsyncResponseMatcher, hash: Hash, data: Vec<u8>) {
+    pub fn resolve(matcher: &mut AsyncResponseMatcher<T>, hash: Hash, data: T) {
         trace!("Resolve waiting {:?}", hash);
 
         match matcher.waiting.remove(&hash) {
@@ -28,7 +28,7 @@ impl AsyncResponseMatcher {
         };
     }
 
-    pub fn remove(matcher: &mut AsyncResponseMatcher, hash: Hash) {
+    pub fn remove(matcher: &mut AsyncResponseMatcher<T>, hash: Hash) {
         trace!("Remove waiting {:?}", hash);
 
         matcher.waiting.remove(&hash).unwrap();
