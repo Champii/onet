@@ -31,3 +31,5 @@ impl Identity {
         }
     }
 }
+
+unsafe impl Send for Identity {}

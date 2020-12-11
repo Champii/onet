@@ -5,6 +5,8 @@ extern crate logger;
 #[macro_use]
 extern crate rsrpc;
 #[macro_use]
+extern crate tarpc;
+#[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
@@ -25,15 +27,17 @@ mod section;
 mod storage;
 mod vault;
 mod vote_result;
+mod routing_service;
 
 use self::onet::Onet;
 
-fn main() {
+#[tokio::main]
+async fn main() -> std::io::Result<()> {
     let config = args::parse_config();
 
     logger::init_logger(config.verbose);
 
     let mut onet = Onet::new(config);
 
-    onet.run();
+    onet.run().await
 }

@@ -66,7 +66,7 @@ impl Onet {
         }
     }
 
-    pub fn run(&mut self) {
+    pub async fn run(&mut self) -> std::io::Result<()> {
         // Dont bootstrap
         // self.dht.run(false);
 
@@ -86,12 +86,12 @@ impl Onet {
         //
 
         match self.config.mode {
-            OnetMode::Client => self.run_client(),
-            OnetMode::Vault => self.run_vault(),
+            OnetMode::Client => self.run_client().await,
+            OnetMode::Vault => self.run_vault().await,
         }
     }
 
-    pub fn run_client(&mut self) {
+    pub async fn run_client(&mut self)-> std::io::Result<()> {
         // let mut client =
         //     ClientManagerRpc::connect_tcp(&self.config.connect_addr.unwrap().to_string()).unwrap();
 
@@ -107,9 +107,10 @@ impl Onet {
         //     SectionRpc::connect_tcp(&self.config.connect_addr.unwrap().to_string()).unwrap();
 
         // let res = client2.store_data("TAMERE2".as_bytes().to_vec());
+        Ok(())
     }
 
-    pub fn run_vault(&mut self) {
+    pub async fn run_vault(&mut self)-> std::io::Result<()> {
         // let mut section = Section::new(self.config.clone());
 
         // section.run();
@@ -118,9 +119,9 @@ impl Onet {
         let mut vault = Vault::new(identity, &self.config, socket);
 
         if self.config.connect_addr.is_none() {
-            vault.bootstrap();
+            vault.bootstrap().await
         } else {
-            vault.connect_bootstrap();
+            vault.connect_bootstrap().await
         }
     }
 }

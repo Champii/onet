@@ -1,11 +1,14 @@
+use crate::rpc::ServiceClient;
 use crate::identity::Identity;
 use crate::onet::OnetConfig;
 use crate::routing::Routing;
-use crate::rpc::RoutingRpc;
 use crate::section::Section;
 use crate::storage::Storage;
 use rsrpc::Network;
 use rsrpc::TcpTransport;
+use tokio_serde::formats::Bincode;
+use tarpc::client;
+use tarpc::context;
 
 pub struct Vault {
     pub identity: Identity,
@@ -26,7 +29,7 @@ impl Vault {
         }
     }
 
-    pub fn bootstrap(&mut self) {
+    pub async fn bootstrap(&mut self) -> std::io::Result<()> {
         info!("Bootstrap node");
 
         let mut section = Section::new(
@@ -36,45 +39,48 @@ impl Vault {
 
         section.routing.write().unwrap().add(self.identity.clone());
 
-        let mut net = Network::<TcpTransport>::new_default(&self.config.listen_addr);
+        // let mut net = Network::<TcpTransport>::new_default(&self.config.listen_addr);
 
-        net.listen();
+        // net.listen();
 
-        section.run(net);
+        section.run();
+        crate::rpc::listen(self.config.listen_addr.clone(), section.routing.clone(), section.hg.clone()).await;
 
         self.section = Some(section);
+
+        Ok(())
     }
 
-    pub fn connect_bootstrap(&mut self) {
+    pub async fn connect_bootstrap(&mut self) -> std::io::Result<()> {
         info!(
             "Connect to bootstrap node {}",
             self.config.connect_addr.unwrap().to_string()
         );
 
-        let mut routing_client =
-            RoutingRpc::connect_tcp(&self.config.connect_addr.clone().unwrap().to_string())
-                .unwrap();
+        let mut section = Section::new(
+            self.config.clone(),
+            Routing::new(self.identity.cur_ident.clone()),
+        );
 
-        let response = routing_client.bootstrap_vault(self.identity.clone());
+        let connect_addr = self.config.connect_addr.clone().unwrap();
 
-        if let Ok(response) = response.unwrap() {
-            info!("Joined section {} with {} vaults", 0, response.len());
-            // If response OK
-            // create section and connect to hg with section routing
+        let mut client = crate::rpc::client(connect_addr.to_string()).await;
+
+        let response = client
+            .bootstrap_vault(context::current(), self.identity.clone())
+            .await;
+
+        println!("RESPONSE {:?}", response);
             let mut section = Section::new(
                 self.config.clone(),
-                Routing::from(self.identity.cur_ident.clone(), response),
+                Routing::from(self.identity.cur_ident.clone(), response.unwrap().unwrap()),
             );
 
-            let mut net = Network::<TcpTransport>::new_default(&self.config.listen_addr);
+        section.run();
+        crate::rpc::listen(self.config.listen_addr.clone(), section.routing.clone(), section.hg.clone()).await;
 
-            net.listen();
+        self.section = Some(section);
 
-            section.run(net);
-
-            self.section = Some(section);
-        } else {
-            error!("Bootstrap node and/or section refused this vault to join");
-        }
+        Ok(())
     }
 }
